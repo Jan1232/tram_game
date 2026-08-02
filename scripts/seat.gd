@@ -1,7 +1,7 @@
 class_name Seat
 extends Area2D
 
-## Сиденье-прототип: жёлтый квадрат (твёрдый) + зона E со стороны прохода.
+## Сиденье: спрайт стула + твёрдый блокер + зона E со стороны прохода.
 
 enum Row { TOP, BOTTOM }
 
@@ -10,13 +10,14 @@ enum Row { TOP, BOTTOM }
 @export var seat_size: float = 72.0
 ## Место кондуктора: только ГГ, NPC не спавнятся.
 @export var conductor_only: bool = false
+@export var chair_texture: Texture2D
 
 var occupied_by_player: bool = false
 var passenger: Passenger = null
 
 @onready var sit_point: Marker2D = $SitPoint
 @onready var stand_point: Marker2D = $StandPoint
-@onready var _visual: Polygon2D = $Visual
+@onready var _visual: Sprite2D = $Visual
 @onready var _interact: CollisionShape2D = $CollisionShape2D
 @onready var _blocker_shape: CollisionShape2D = $Blocker/CollisionShape2D
 
@@ -38,17 +39,21 @@ func _ready() -> void:
 
 
 func _setup_visual() -> void:
-	var half := seat_size * 0.5
-	# Место кондуктора — чуть другой оттенок, чтобы отличать.
-	_visual.color = Color(0.98, 0.55, 0.12, 1.0) if conductor_only else Color(0.95, 0.82, 0.15, 1.0)
-	_visual.polygon = PackedVector2Array([
-		Vector2(-half, -half),
-		Vector2(half, -half),
-		Vector2(half, half),
-		Vector2(-half, half),
-	])
+	if chair_texture == null:
+		chair_texture = load("res://assets/texture/tram/chair.svg") as Texture2D
+	if chair_texture:
+		_visual.texture = chair_texture
+		var tex_w := float(chair_texture.get_width())
+		# Масштаб по ширине seat_size; высота остаётся пропорциональной (~1.8×).
+		var s := seat_size / maxf(tex_w, 1.0)
+		_visual.scale = Vector2(s, s)
+		_visual.flip_h = not facing_right
+		# Верхний ряд: зеркало по вертикали — спинка к стене, сиденье к проходу.
+		_visual.flip_v = row == Row.TOP
+		# Место кондуктора чуть теплее, чтобы отличать.
+		_visual.modulate = Color(1.12, 0.92, 0.78, 1.0) if conductor_only else Color.WHITE
 
-	# Твёрдое тело = сам квадрат.
+	# Твёрдое тело = зона сиденья (не весь высокий спрайт).
 	if _blocker_shape.shape is RectangleShape2D:
 		(_blocker_shape.shape as RectangleShape2D).size = Vector2(seat_size, seat_size)
 
