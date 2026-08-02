@@ -50,12 +50,14 @@ var _current_seat: Seat = null
 ## После посадки ждём отпускания WASD, иначе удержание сразу рвёт sit.
 var _seat_await_release: bool = false
 var _pending_passenger: Passenger = null
+var _standing_time: float = 0.0
 
 enum CheckPhase { NONE, CLAIM, AFTER_LOST, AFTER_SCANDAL }
 var _check_phase: CheckPhase = CheckPhase.NONE
 
 
 func _ready() -> void:
+	add_to_group("conductor")
 	_base_speed_scale = _sprite.speed_scale
 	_sprite.scale = Vector2(sprite_scale, sprite_scale)
 	_sprite.animation_finished.connect(_on_animation_finished)
@@ -65,6 +67,11 @@ func _ready() -> void:
 	_enter_idle_afk()
 
 
+func on_shift_start() -> void:
+	_standing_time = 0.0
+	_clear_check()
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("interact"):
 		_try_interact()
@@ -72,6 +79,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _physics_process(delta: float) -> void:
+	_apply_passive_stress(delta)
 	match _anim_state:
 		AnimState.SITTING_DOWN, AnimState.STANDING_UP:
 			velocity = Vector2.ZERO
@@ -200,12 +208,27 @@ func _try_interact() -> void:
 				_begin_sit_down(seat)
 
 
+func _apply_passive_stress(delta: float) -> void:
+	var b := StressSystem.balance
+	if b == null:
+		return
+	if _anim_state == AnimState.SEATED:
+		_standing_time = 0.0
+		StressSystem.add_fill(-b.sit_recover * delta)
+	else:
+		_standing_time += delta
+		# Включая меню — стоишь, усталость капает.
+		StressSystem.add_fill(b.stand_fatigue * delta)
+
+
 func _check_passenger(p: Passenger) -> void:
 	if _pending_passenger != null or _check_phase != CheckPhase.NONE:
 		return
 	match p.on_interact():
-		"paid", "done":
-			return
+		"paid":
+			StressSystem.add_fill(StressSystem.balance.calm_ticket)
+		"done":
+			pass
 		"claim":
 			_pending_passenger = p
 			_check_phase = CheckPhase.CLAIM
@@ -289,11 +312,13 @@ func _resolve_demand(p: Passenger) -> void:
 		return
 	if p.can_show_ticket:
 		p.say_show_ticket()
+		if p.verified:
+			StressSystem.add_fill(StressSystem.balance.repeat_ask)
 		p.mark_verified_ok()
 		_finish_success("Всё правильно — билет на месте")
 		return
-	# Нет билета: заяц или честно потерял (в т.ч. после твоей продажи).
 	p.say_no_ticket()
+	StressSystem.add_fill(StressSystem.balance.refuse)
 	_check_phase = CheckPhase.AFTER_LOST
 	_open_after_lost_menu(p)
 
@@ -303,32 +328,45 @@ func _resolve_insist(p: Passenger) -> void:
 		if p.can_show_ticket:
 			p.say_show_ticket()
 			p.mark_verified_ok()
+			StressSystem.add_fill(StressSystem.balance.insist_right)
 			_finish_success("Всё правильно — уже был обилечен")
 		else:
-			# Платил тебе, билета нет — бесится от повторной оплаты.
 			p.say_scandal()
 			_check_phase = CheckPhase.AFTER_SCANDAL
 			_open_scandal_menu(p)
 		return
-	# Тебе ещё не платил — настояли = заставили заплатить (не «уже платил где-то»).
-	p.mark_sold()
-	_finish_success("Всё правильно — заставил заплатить")
+	# Не платил тебе. Настоять = шанс, что заплатит.
+	if p.rolls_insist_pays():
+		p.mark_sold()
+		StressSystem.add_fill(StressSystem.balance.insist_right)
+		_finish_success("Всё правильно — заставил заплатить")
+	else:
+		p.say_refuse_pay()
+		_check_phase = CheckPhase.AFTER_SCANDAL
+		_open_scandal_menu(p)
 
 
 func _resolve_cops(p: Passenger) -> void:
+	StressSystem.add_fill(StressSystem.balance.police)
 	if p.is_dodger():
 		p.mark_caught_dodger()
+		StressSystem.add_fill(StressSystem.balance.catch_dodger)
 		_finish_success("Всё правильно — поймали зайца")
 	else:
 		p.mark_wrong_arrest()
-		_finish_game_over("Вызвали копов на человека,\nкоторый уже платил")
+		StressSystem.add_fill(StressSystem.balance.wrong_arrest)
+		_finish_notice("Копы на человека, который уже платил")
 
 
 func _resolve_leave(p: Passenger) -> void:
+	var from_scandal := _check_phase == CheckPhase.AFTER_SCANDAL
 	if p.is_dodger():
 		p.mark_dodger_escaped()
-		_finish_game_over("Упустили зайца — проехал бесплатно")
+		StressSystem.add_fill(StressSystem.balance.dodger_escaped)
+		_finish_notice("Заяц проехал бесплатно")
 	else:
+		if from_scandal:
+			StressSystem.add_fill(StressSystem.balance.scandal_leave)
 		p.mark_soft_leave()
 		_finish_success("Всё правильно — отпустили")
 
@@ -344,11 +382,13 @@ func _finish_success(text: String) -> void:
 		flow.show_success(text)
 
 
-func _finish_game_over(reason: String) -> void:
+func _finish_notice(text: String) -> void:
 	_clear_check()
 	var flow := _flow()
-	if flow and flow.has_method("show_game_over"):
-		flow.show_game_over(reason)
+	if flow and flow.has_method("show_notice"):
+		flow.show_notice(text)
+	elif flow and flow.has_method("show_success"):
+		flow.show_success(text)
 
 
 func _clear_check() -> void:

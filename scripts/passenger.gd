@@ -67,12 +67,20 @@ const LINES_LEAVE := [
 	"Счастливо.",
 ]
 
+const LINES_REFUSE_PAY := [
+	"Нет денег у меня!",
+	"Не буду платить, сказал же.",
+	"Да отстаньте, не плачу.",
+]
+
 @export var sprite_scale: float = 0.18
 @export var lifetime_min_sec: float = 60.0
 @export var lifetime_max_sec: float = 120.0
 @export var speech_duration_sec: float = 2.6
 ## Шанс потерять билет после того, как оплатил тебе.
 @export var lose_ticket_chance: float = 0.35
+## Шанс, что не плативший заплатит при «Настоять».
+@export var insist_pay_chance: float = 0.5
 
 var seat: Seat = null
 var kind: Kind = Kind.PAID
@@ -81,6 +89,8 @@ var claims_paid: bool = false
 var paid_to_conductor: bool = false
 ## Может показать билет при «Потребовать».
 var can_show_ticket: bool = false
+## Игрок подтвердил оплату (для +8 повторного запроса).
+var verified: bool = false
 ## Сколько раз подходили с E (1 = первый контакт, 3 = вторая проверка…).
 var visit_count: int = 0
 ## Терминальное состояние (поймали / game over path).
@@ -194,8 +204,17 @@ func say_scandal() -> void:
 	say(_pick(LINES_SCANDAL))
 
 
+func rolls_insist_pays() -> bool:
+	return randf() < insist_pay_chance
+
+
+func say_refuse_pay() -> void:
+	say(_pick(LINES_REFUSE_PAY))
+
+
 func mark_sold() -> void:
 	paid_to_conductor = true
+	verified = true
 	_roll_keeps_ticket()
 	say(_pick(LINES_SOLD))
 	ticketed.emit(self)
@@ -228,6 +247,7 @@ func mark_soft_leave() -> void:
 
 func mark_verified_ok() -> void:
 	# Не закрываем насовсем — можно вернуться (3-й / 4-й визит).
+	verified = true
 	outcome.emit("verified_ok", self)
 
 
