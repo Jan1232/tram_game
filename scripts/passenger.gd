@@ -206,6 +206,8 @@ func mark_caught_dodger() -> void:
 	check_done = true
 	say(_pick(LINES_COPS_CAUGHT))
 	outcome.emit("caught_dodger", self)
+	# Копы уводят — пассажир исчезает с локации.
+	despawn(true)
 
 
 func mark_wrong_arrest() -> void:
