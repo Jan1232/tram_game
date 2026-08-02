@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://ci2e8g6wan4m8"
-path="res://.godot/imported/tram_interior.png-c4d67056925975dee6fb14796af88a59.ctex"
+uid="uid://tfte8a4sq2wk"
+path="res://.godot/imported/new_floor_two.png-d7e05b7e754908dae9ef9477f4a557c7.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/tram/tram_interior.png"
-dest_files=["res://.godot/imported/tram_interior.png-c4d67056925975dee6fb14796af88a59.ctex"]
+source_file="res://assets/texture/tram/new_floor_two.png"
+dest_files=["res://.godot/imported/new_floor_two.png-d7e05b7e754908dae9ef9477f4a557c7.ctex"]
 
 [params]
 

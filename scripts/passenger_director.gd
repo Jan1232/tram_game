@@ -34,7 +34,7 @@ func reinit_for_shift() -> void:
 	_spawn_initial()
 
 
-func _on_band_changed(_band: DayBand) -> void:
+func _on_band_changed(_new_band: DayBand) -> void:
 	# Числа читаются лениво; уже сидящие не выгоняются.
 	pass
 

@@ -6,17 +6,26 @@ extends Node
 signal time_changed(minutes: int)
 signal band_changed(band: DayBand)
 signal shift_ended(reason: String)
+signal date_changed(year: int, month: int, day: int)
 
 @export var config: DayConfig
 @export var faint_layer_path: NodePath = NodePath("../FaintLayer")
 @export var summary_layer_path: NodePath = NodePath("../ShiftSummaryLayer")
 @export var director_path: NodePath = NodePath("../PassengerDirector")
+## Стартовая календарная дата кампании (дата первой смены).
+@export var start_year: int = 1998
+@export var start_month: int = 11
+@export var start_day: int = 22
 
 var _minutes: float = 0.0
 var _running: bool = false
 var _current_band: DayBand = null
 var _faints_this_shift: int = 0
 var _fainting: bool = false
+var _shifts_started: int = 0
+var _cal_year: int = 1998
+var _cal_month: int = 11
+var _cal_day: int = 22
 
 var _faint_layer: CanvasLayer = null
 var _summary_layer: CanvasLayer = null
@@ -26,6 +35,9 @@ var _summary_label: Label = null
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	add_to_group("day_manager")
+	_cal_year = start_year
+	_cal_month = start_month
+	_cal_day = start_day
 	if config == null:
 		config = DayConfig.new()
 	if config.bands.is_empty():
@@ -38,7 +50,8 @@ func _ready() -> void:
 		_faint_layer.visible = false
 	if _summary_layer:
 		_summary_layer.visible = false
-	StressSystem.fainted.connect(on_faint)
+	var ss := get_node("/root/StressSystem")
+	ss.fainted.connect(on_faint)
 	call_deferred("_start_shift")
 
 
@@ -64,6 +77,10 @@ func current_band() -> DayBand:
 
 func current_minutes() -> int:
 	return int(_minutes)
+
+
+func current_date_parts() -> Array:
+	return [_cal_year, _cal_month, _cal_day]
 
 
 func _update_band() -> void:
@@ -103,11 +120,15 @@ func on_faint() -> void:
 
 
 func _start_shift() -> void:
+	if _shifts_started > 0:
+		_advance_calendar_day()
+	_shifts_started += 1
 	_minutes = float(config.start_min)
 	_faints_this_shift = 0
 	_current_band = null
 	_fainting = false
-	StressSystem.reset_fill()
+	get_node("/root/StressSystem").reset_fill()
+	get_node("/root/FatigueSystem").reset()
 	_hide_summary()
 	_show_blackout(false)
 	var cond := get_tree().get_first_node_in_group("conductor")
@@ -116,6 +137,7 @@ func _start_shift() -> void:
 	get_tree().paused = false
 	_running = true
 	time_changed.emit(int(_minutes))
+	date_changed.emit(_cal_year, _cal_month, _cal_day)
 	_update_band()
 	_reinit_director()
 
@@ -167,7 +189,7 @@ func _show_summary(reason: String) -> void:
 	var body := "%s\nОбмороки: %d\nПотолок стресса: %.0f\n\nEnter — следующая смена" % [
 		title,
 		_faints_this_shift,
-		StressSystem.current_ceiling(),
+		get_node("/root/StressSystem").current_ceiling(),
 	]
 	if _summary_label:
 		_summary_label.text = body
@@ -210,3 +232,27 @@ func _make_band(
 	b.respawn_min = r_min
 	b.respawn_max = r_max
 	return b
+
+
+func _advance_calendar_day() -> void:
+	_cal_day += 1
+	var dim := _days_in_month(_cal_year, _cal_month)
+	if _cal_day > dim:
+		_cal_day = 1
+		_cal_month += 1
+		if _cal_month > 12:
+			_cal_month = 1
+			_cal_year += 1
+
+
+func _days_in_month(year: int, month: int) -> int:
+	match month:
+		1, 3, 5, 7, 8, 10, 12:
+			return 31
+		4, 6, 9, 11:
+			return 30
+		2:
+			var leap := (year % 4 == 0 and year % 100 != 0) or (year % 400 == 0)
+			return 29 if leap else 28
+		_:
+			return 30

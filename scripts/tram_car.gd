@@ -9,16 +9,21 @@ const CORRIDOR_H := 280.0
 const WALL := 40.0
 const SEAT_SIZE := 56.0
 const SEATS_PER_ROW := 8
+## Пустые зоны у торцов коридора под будущие входы.
+const ENTRANCE_ZONE := 420.0
 
-@onready var _floor: Polygon2D = $Floor
+@onready var _floor: Node2D = $Floor
 @onready var _walls: StaticBody2D = $Walls
 @onready var _seats_root: Node2D = $Seats
 @onready var _spawn: Marker2D = $ConductorSpawn
 
 @export var seat_scene: PackedScene
+@export var floor_texture: Texture2D
 
 
 func _ready() -> void:
+	if floor_texture == null:
+		floor_texture = load("res://assets/texture/tram/new_floor_two.png") as Texture2D
 	var corridor_w := SCREEN_W * LENGTH_SCALE
 	var y0 := (SCREEN_H - CORRIDOR_H) * 0.5
 
@@ -29,13 +34,34 @@ func _ready() -> void:
 
 
 func _build_floor(corridor_w: float, y0: float) -> void:
-	_floor.color = Color(0.18, 0.19, 0.22, 1.0)
-	_floor.polygon = PackedVector2Array([
-		Vector2(0, y0),
-		Vector2(corridor_w, y0),
-		Vector2(corridor_w, y0 + CORRIDOR_H),
-		Vector2(0, y0 + CORRIDOR_H),
-	])
+	for child in _floor.get_children():
+		child.queue_free()
+
+	if floor_texture == null:
+		push_error("TramCar: не задана floor_texture")
+		return
+
+	# Высота модуля = 100% коридора, ширина — auto по пропорциям текстуры.
+	var tile_w := float(floor_texture.get_width())
+	var tile_h := float(floor_texture.get_height())
+	var scale_y := CORRIDOR_H / maxf(tile_h, 1.0)
+	var draw_w := tile_w * scale_y
+
+	var x := 0.0
+	while x < corridor_w - 0.5:
+		var spr := Sprite2D.new()
+		spr.texture = floor_texture
+		spr.centered = false
+		spr.position = Vector2(x, y0)
+		spr.scale = Vector2(scale_y, scale_y)
+		# Обрезаем последний модуль по правому краю коридора.
+		var remain := corridor_w - x
+		if remain < draw_w:
+			var region_w := remain / scale_y
+			spr.region_enabled = true
+			spr.region_rect = Rect2(0.0, 0.0, region_w, tile_h)
+		_floor.add_child(spr)
+		x += draw_w
 
 
 func _build_walls(corridor_w: float, y0: float) -> void:
@@ -66,14 +92,15 @@ func _build_seats(corridor_w: float, y0: float) -> void:
 	for child in _seats_root.get_children():
 		child.queue_free()
 
-	var margin_x := 160.0
-	var usable := corridor_w - margin_x * 2.0
-	var step := usable / float(SEATS_PER_ROW - 1)
+	# Края коридора свободны (входы). Все сиденья — равномерно на оставшемся отрезке.
+	var first_x := ENTRANCE_ZONE
+	var last_x := corridor_w - ENTRANCE_ZONE
+	var step := (last_x - first_x) / float(SEATS_PER_ROW - 1)
 	var top_y := y0 + SEAT_SIZE * 0.85
 	var bottom_y := y0 + CORRIDOR_H - SEAT_SIZE * 0.85
 
 	for i in SEATS_PER_ROW:
-		var x := margin_x + step * float(i)
+		var x := first_x + step * float(i)
 		_spawn_seat(Vector2(x, top_y), Seat.Row.TOP, false)
 		# Нижний левый (первый) — место кондуктора.
 		_spawn_seat(Vector2(x, bottom_y), Seat.Row.BOTTOM, i == 0)

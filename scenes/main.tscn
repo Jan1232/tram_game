@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3]
+[gd_scene load_steps=9 format=3]
 
 [ext_resource type="PackedScene" path="res://scenes/tram/tram_car.tscn" id="1_tram"]
 [ext_resource type="PackedScene" path="res://scenes/player/conductor.tscn" id="2_conductor"]
@@ -6,9 +6,9 @@
 [ext_resource type="PackedScene" path="res://scenes/tram/passenger.tscn" id="4_passenger"]
 [ext_resource type="Script" path="res://scripts/game_flow.gd" id="5_flow"]
 [ext_resource type="PackedScene" path="res://scenes/action_menu.tscn" id="6_action_menu"]
-[ext_resource type="Script" path="res://scripts/ui/stress_bar.gd" id="7_stressbar"]
 [ext_resource type="Script" path="res://scripts/day_manager.gd" id="8_day"]
-[ext_resource type="Script" path="res://scripts/ui/clock_label.gd" id="9_clock"]
+[ext_resource type="Script" path="res://scripts/ui/fatigue_vignette.gd" id="10_vignette"]
+[ext_resource type="Script" path="res://scripts/ui/game_header.gd" id="11_header"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("5_flow")
@@ -32,41 +32,29 @@ day_manager = NodePath("../DayManager")
 
 [node name="ActionMenu" parent="." instance=ExtResource("6_action_menu")]
 
+[node name="FatigueVignette" type="CanvasLayer" parent="."]
+script = ExtResource("10_vignette")
+
 [node name="HUDLayer" type="CanvasLayer" parent="."]
 layer = 10
 
-[node name="StressBar" type="Control" parent="HUDLayer"]
-offset_left = 40.0
-offset_top = 90.0
-offset_right = 560.0
-offset_bottom = 130.0
-script = ExtResource("7_stressbar")
-
-[node name="ClockLayer" type="CanvasLayer" parent="."]
-layer = 10
-
-[node name="ClockLabel" type="Label" parent="ClockLayer"]
-offset_left = 1480.0
-offset_top = 30.0
-offset_right = 1880.0
-offset_bottom = 90.0
-theme_override_colors/font_color = Color(0.92, 0.92, 0.9, 1)
-theme_override_colors/font_outline_color = Color(0.05, 0.05, 0.08, 1)
-theme_override_constants/outline_size = 6
-theme_override_font_sizes/font_size = 36
-text = "05:00"
-horizontal_alignment = 2
-script = ExtResource("9_clock")
+[node name="GameHeader" type="Control" parent="HUDLayer"]
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 56.0
+grow_horizontal = 2
+script = ExtResource("11_header")
 day_manager_path = NodePath("../../DayManager")
+starting_money = 0
 
 [node name="SuccessLayer" type="CanvasLayer" parent="."]
 layer = 11
 
 [node name="SuccessToast" type="Label" parent="SuccessLayer"]
 offset_left = 40.0
-offset_top = 36.0
+offset_top = 72.0
 offset_right = 720.0
-offset_bottom = 84.0
+offset_bottom = 120.0
 theme_override_colors/font_color = Color(0.85, 1, 0.75, 1)
 theme_override_colors/font_outline_color = Color(0.05, 0.08, 0.05, 1)
 theme_override_constants/outline_size = 6

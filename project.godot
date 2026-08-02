@@ -19,6 +19,7 @@ config/icon="res://icon.svg"
 [autoload]
 
 StressSystem="*res://scripts/autoload/stress_system.gd"
+FatigueSystem="*res://scripts/autoload/fatigue_system.gd"
 
 [display]
 

@@ -14,6 +14,8 @@ extends CharacterBody2D
 ## Экранный размер ≈ 512px * sprite_scale. 0.5 → ~256px.
 @export var sprite_scale: float = 0.5
 @export var sit_fps: float = 24.0
+## Смещение спрайта сидя: origin тела = ноги (stand ~-86), у сидения нужен оффсет ближе к NPC.
+@export var sit_sprite_offset: Vector2 = Vector2(0, -24)
 
 @export_group("Idle")
 @export var idle_afk_anim: StringName = &"idle_afk"
@@ -40,6 +42,9 @@ enum AnimState {
 @onready var _sprite: AnimatedSprite2D = $AnimatedSprite2D
 @onready var _collision: CollisionShape2D = $CollisionShape2D
 @onready var _action_menu: ActionMenu = get_node_or_null("/root/Main/ActionMenu")
+## Не используем глобалы автолоадов — при hot-reload имена иногда пропадают на парсе.
+@onready var _stress: Node = get_node("/root/StressSystem")
+@onready var _fatigue: Node = get_node("/root/FatigueSystem")
 
 var _anim_state: AnimState = AnimState.IDLE_AFK
 var _base_speed_scale: float = 1.0
@@ -50,7 +55,7 @@ var _current_seat: Seat = null
 ## После посадки ждём отпускания WASD, иначе удержание сразу рвёт sit.
 var _seat_await_release: bool = false
 var _pending_passenger: Passenger = null
-var _standing_time: float = 0.0
+var _stand_sprite_offset: Vector2 = Vector2.ZERO
 
 enum CheckPhase { NONE, CLAIM, AFTER_LOST, AFTER_SCANDAL }
 var _check_phase: CheckPhase = CheckPhase.NONE
@@ -58,6 +63,7 @@ var _check_phase: CheckPhase = CheckPhase.NONE
 
 func _ready() -> void:
 	add_to_group("conductor")
+	_stand_sprite_offset = _sprite.position
 	_base_speed_scale = _sprite.speed_scale
 	_sprite.scale = Vector2(sprite_scale, sprite_scale)
 	_sprite.animation_finished.connect(_on_animation_finished)
@@ -68,7 +74,6 @@ func _ready() -> void:
 
 
 func on_shift_start() -> void:
-	_standing_time = 0.0
 	_clear_check()
 
 
@@ -79,7 +84,10 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _physics_process(delta: float) -> void:
+	var seated := _anim_state == AnimState.SEATED
 	_apply_passive_stress(delta)
+	if _fatigue:
+		_fatigue.tick(delta, seated)
 	match _anim_state:
 		AnimState.SITTING_DOWN, AnimState.STANDING_UP:
 			velocity = Vector2.ZERO
@@ -106,7 +114,8 @@ func _physics_process(delta: float) -> void:
 	var wants_move := direction.length_squared() > 0.0001
 
 	if wants_move:
-		velocity = direction * speed
+		var speed_mult: float = _fatigue.speed_multiplier() if _fatigue else 1.0
+		velocity = direction * speed * speed_mult
 		_start_walk(direction)
 		_sync_walk_fps(velocity.length())
 	else:
@@ -209,16 +218,13 @@ func _try_interact() -> void:
 
 
 func _apply_passive_stress(delta: float) -> void:
-	var b := StressSystem.balance
+	# Стресс пассивно только падает сидя. Ходьба стресс-нейтральна.
+	if _stress == null or _anim_state != AnimState.SEATED:
+		return
+	var b = _stress.balance
 	if b == null:
 		return
-	if _anim_state == AnimState.SEATED:
-		_standing_time = 0.0
-		StressSystem.add_fill(-b.sit_recover * delta)
-	else:
-		_standing_time += delta
-		# Включая меню — стоишь, усталость капает.
-		StressSystem.add_fill(b.stand_fatigue * delta)
+	_stress.add_fill(-b.sit_recover * delta)
 
 
 func _check_passenger(p: Passenger) -> void:
@@ -226,7 +232,7 @@ func _check_passenger(p: Passenger) -> void:
 		return
 	match p.on_interact():
 		"paid":
-			StressSystem.add_fill(StressSystem.balance.calm_ticket)
+			_stress.add_fill(_stress.balance.calm_ticket)
 		"done":
 			pass
 		"claim":
@@ -313,32 +319,28 @@ func _resolve_demand(p: Passenger) -> void:
 	if p.can_show_ticket:
 		p.say_show_ticket()
 		if p.verified:
-			StressSystem.add_fill(StressSystem.balance.repeat_ask)
+			_stress.add_fill(_stress.balance.repeat_ask)
 		p.mark_verified_ok()
 		_finish_success("Всё правильно — билет на месте")
 		return
 	p.say_no_ticket()
-	StressSystem.add_fill(StressSystem.balance.refuse)
+	_stress.add_fill(_stress.balance.refuse)
 	_check_phase = CheckPhase.AFTER_LOST
 	_open_after_lost_menu(p)
 
 
 func _resolve_insist(p: Passenger) -> void:
 	if p.paid_to_conductor:
-		if p.can_show_ticket:
-			p.say_show_ticket()
-			p.mark_verified_ok()
-			StressSystem.add_fill(StressSystem.balance.insist_right)
-			_finish_success("Всё правильно — уже был обилечен")
-		else:
-			p.say_scandal()
-			_check_phase = CheckPhase.AFTER_SCANDAL
-			_open_scandal_menu(p)
+		# Уже платил тебе → «Настоять на оплате» = требовать дважды → скандал.
+		# Стоимость на исходе (уйти +12 / копы +30), не награда за ошибку памяти.
+		p.say_scandal()
+		_check_phase = CheckPhase.AFTER_SCANDAL
+		_open_scandal_menu(p)
 		return
 	# Не платил тебе. Настоять = шанс, что заплатит.
 	if p.rolls_insist_pays():
 		p.mark_sold()
-		StressSystem.add_fill(StressSystem.balance.insist_right)
+		_stress.add_fill(_stress.balance.insist_right)
 		_finish_success("Всё правильно — заставил заплатить")
 	else:
 		p.say_refuse_pay()
@@ -347,14 +349,13 @@ func _resolve_insist(p: Passenger) -> void:
 
 
 func _resolve_cops(p: Passenger) -> void:
-	StressSystem.add_fill(StressSystem.balance.police)
 	if p.is_dodger():
 		p.mark_caught_dodger()
-		StressSystem.add_fill(StressSystem.balance.catch_dodger)
+		_stress.add_fill(_stress.balance.cops_right) # −30, награда за верную поимку
 		_finish_success("Всё правильно — поймали зайца")
 	else:
 		p.mark_wrong_arrest()
-		StressSystem.add_fill(StressSystem.balance.wrong_arrest)
+		_stress.add_fill(_stress.balance.cops_wrong) # +30, ошибочный арест
 		_finish_notice("Копы на человека, который уже платил")
 
 
@@ -362,11 +363,11 @@ func _resolve_leave(p: Passenger) -> void:
 	var from_scandal := _check_phase == CheckPhase.AFTER_SCANDAL
 	if p.is_dodger():
 		p.mark_dodger_escaped()
-		StressSystem.add_fill(StressSystem.balance.dodger_escaped)
+		_stress.add_fill(_stress.balance.dodger_escaped)
 		_finish_notice("Заяц проехал бесплатно")
 	else:
 		if from_scandal:
-			StressSystem.add_fill(StressSystem.balance.scandal_leave)
+			_stress.add_fill(_stress.balance.scandal_leave)
 		p.mark_soft_leave()
 		_finish_success("Всё правильно — отпустили")
 
@@ -407,6 +408,7 @@ func _begin_sit_down(seat: Seat) -> void:
 
 	velocity = Vector2.ZERO
 	global_position = seat.get_sit_global_position()
+	_sprite.position = sit_sprite_offset
 	_collision.set_deferred("disabled", true)
 	z_index = 2 if seat.row == Seat.Row.BOTTOM else 0
 
@@ -442,6 +444,7 @@ func _finish_stand_up() -> void:
 	_current_seat = null
 
 	_sprite.speed_scale = absf(_base_speed_scale)
+	_sprite.position = _stand_sprite_offset
 	_collision.set_deferred("disabled", false)
 	global_position = stand_pos
 	z_index = 1
