@@ -11,14 +11,12 @@ extends Node
 
 var _alive: Array[Passenger] = []
 var _respawn_queue: Array[float] = []
-var _game_over: bool = false
 
 
 func _ready() -> void:
 	if passenger_scene == null:
 		push_error("PassengerDirector: не задана passenger_scene")
 		return
-	# Нельзя add_child во время разворачивания дерева Main.
 	call_deferred("_spawn_initial")
 
 
@@ -29,8 +27,6 @@ func _spawn_initial() -> void:
 
 
 func _process(delta: float) -> void:
-	if _game_over:
-		return
 	for i in range(_respawn_queue.size() - 1, -1, -1):
 		_respawn_queue[i] -= delta
 		if _respawn_queue[i] <= 0.0:
@@ -51,12 +47,21 @@ func _spawn_one() -> void:
 
 	var p: Passenger = passenger_scene.instantiate() as Passenger
 	p.removed.connect(_on_passenger_removed)
-	p.game_end_requested.connect(_on_game_end)
+	_assign_kind(p)
 	_alive.append(p)
-	# Резервируем место до входа в дерево.
 	seat.set_passenger(p)
 	get_parent().add_child(p)
 	p.setup(seat)
+	print("spawn passenger kind=", Passenger.Kind.keys()[p.kind])
+
+
+## Доли: 70% PAID / 30% LIED.
+## «Потерял билет» бывает только ПОСЛЕ оплаты тебе (lose_ticket_chance), не с порога.
+func _assign_kind(p: Passenger) -> void:
+	if randf() < 0.7:
+		p.kind = Passenger.Kind.PAID
+	else:
+		p.kind = Passenger.Kind.LIED
 
 
 func _pick_free_seat() -> Seat:
@@ -79,12 +84,4 @@ func _queue_respawn() -> void:
 
 func _on_passenger_removed(passenger: Passenger) -> void:
 	_alive.erase(passenger)
-	if _game_over:
-		return
 	_queue_respawn()
-
-
-func _on_game_end(_passenger: Passenger) -> void:
-	_game_over = true
-	_respawn_queue.clear()
-	get_tree().call_group("game_flow", "on_passenger_game_end")

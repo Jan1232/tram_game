@@ -3,7 +3,7 @@ extends CharacterBody2D
 
 ## Ходьба кондуктора по проходу вагона (WASD / стрелки).
 ## Посадка: E у свободного сиденья. Вставание: E или WASD (после отпускания клавиш).
-## Пассажир: E — обилечить; повторный E — конец игры.
+## Пассажир: первое E = обилечить; меню только если заявил «уже оплатил».
 
 @export var speed: float = 280.0
 @export var frames_per_cycle: int = 20
@@ -39,6 +39,7 @@ enum AnimState {
 
 @onready var _sprite: AnimatedSprite2D = $AnimatedSprite2D
 @onready var _collision: CollisionShape2D = $CollisionShape2D
+@onready var _action_menu: ActionMenu = get_node_or_null("/root/Main/ActionMenu")
 
 var _anim_state: AnimState = AnimState.IDLE_AFK
 var _base_speed_scale: float = 1.0
@@ -48,6 +49,10 @@ var _nearby_passengers: Array[Passenger] = []
 var _current_seat: Seat = null
 ## После посадки ждём отпускания WASD, иначе удержание сразу рвёт sit.
 var _seat_await_release: bool = false
+var _pending_passenger: Passenger = null
+
+enum CheckPhase { NONE, CLAIM, AFTER_LOST, AFTER_SCANDAL }
+var _check_phase: CheckPhase = CheckPhase.NONE
 
 
 func _ready() -> void:
@@ -122,6 +127,8 @@ func register_nearby_passenger(passenger: Passenger) -> void:
 
 func unregister_nearby_passenger(passenger: Passenger) -> void:
 	_nearby_passengers.erase(passenger)
+	if _pending_passenger == passenger:
+		_clear_check()
 
 
 func _is_move_held() -> bool:
@@ -186,11 +193,169 @@ func _try_interact() -> void:
 			# Приоритет: пассажир, потом свободное сиденье.
 			var passenger := _nearest_passenger()
 			if passenger:
-				passenger.interact()
+				_check_passenger(passenger)
 				return
 			var seat := _nearest_free_seat()
 			if seat:
 				_begin_sit_down(seat)
+
+
+func _check_passenger(p: Passenger) -> void:
+	if _pending_passenger != null or _check_phase != CheckPhase.NONE:
+		return
+	match p.on_interact():
+		"paid", "done":
+			return
+		"claim":
+			_pending_passenger = p
+			_check_phase = CheckPhase.CLAIM
+			_ensure_menu_connected()
+			_open_claim_menu(p)
+
+
+func _ensure_menu_connected() -> void:
+	if _action_menu and not _action_menu.action_chosen.is_connected(_on_action_chosen):
+		_action_menu.action_chosen.connect(_on_action_chosen)
+
+
+func _passenger_screen_pos(p: Passenger) -> Vector2:
+	return get_viewport().get_canvas_transform() * p.global_position
+
+
+func _open_claim_menu(p: Passenger) -> void:
+	if _action_menu == null:
+		return
+	_action_menu.open_choices(_passenger_screen_pos(p), [
+		{"id": "demand", "text": "Потребовать билет"},
+		{"id": "insist", "text": "Настоять на оплате"},
+		{"id": "leave", "text": "Уйти"},
+	])
+
+
+func _open_after_lost_menu(p: Passenger) -> void:
+	if _action_menu == null:
+		return
+	_action_menu.open_choices(_passenger_screen_pos(p), [
+		{"id": "cops", "text": "Вызвать копов"},
+		{"id": "leave", "text": "Уйти"},
+	])
+
+
+func _open_scandal_menu(p: Passenger) -> void:
+	if _action_menu == null:
+		return
+	_action_menu.open_choices(_passenger_screen_pos(p), [
+		{"id": "cops", "text": "Вызвать копов"},
+		{"id": "leave", "text": "Уйти"},
+	])
+
+
+func _on_action_chosen(action: String) -> void:
+	var p := _pending_passenger
+	if p == null or not is_instance_valid(p):
+		_clear_check()
+		return
+
+	match _check_phase:
+		CheckPhase.CLAIM:
+			match action:
+				"demand":
+					_resolve_demand(p)
+				"insist":
+					_resolve_insist(p)
+				"leave":
+					_resolve_leave(p)
+				_:
+					_clear_check()
+		CheckPhase.AFTER_LOST, CheckPhase.AFTER_SCANDAL:
+			match action:
+				"cops":
+					_resolve_cops(p)
+				"leave":
+					_resolve_leave(p)
+				_:
+					_clear_check()
+		_:
+			_clear_check()
+
+
+func _resolve_demand(p: Passenger) -> void:
+	# 3-й визит — 50% скандал, 4+ — 90%.
+	var scandal_p := p.scandal_chance_on_demand()
+	if scandal_p > 0.0 and randf() < scandal_p:
+		p.say_scandal()
+		_check_phase = CheckPhase.AFTER_SCANDAL
+		_open_scandal_menu(p)
+		return
+	if p.can_show_ticket:
+		p.say_show_ticket()
+		p.mark_verified_ok()
+		_finish_success("Всё правильно — билет на месте")
+		return
+	# Нет билета: заяц или честно потерял (в т.ч. после твоей продажи).
+	p.say_no_ticket()
+	_check_phase = CheckPhase.AFTER_LOST
+	_open_after_lost_menu(p)
+
+
+func _resolve_insist(p: Passenger) -> void:
+	if p.paid_to_conductor:
+		if p.can_show_ticket:
+			p.say_show_ticket()
+			p.mark_verified_ok()
+			_finish_success("Всё правильно — уже был обилечен")
+		else:
+			# Платил тебе, билета нет — бесится от повторной оплаты.
+			p.say_scandal()
+			_check_phase = CheckPhase.AFTER_SCANDAL
+			_open_scandal_menu(p)
+		return
+	# Тебе ещё не платил — настояли = заставили заплатить (не «уже платил где-то»).
+	p.mark_sold()
+	_finish_success("Всё правильно — заставил заплатить")
+
+
+func _resolve_cops(p: Passenger) -> void:
+	if p.is_dodger():
+		p.mark_caught_dodger()
+		_finish_success("Всё правильно — поймали зайца")
+	else:
+		p.mark_wrong_arrest()
+		_finish_game_over("Вызвали копов на человека,\nкоторый уже платил")
+
+
+func _resolve_leave(p: Passenger) -> void:
+	if p.is_dodger():
+		p.mark_dodger_escaped()
+		_finish_game_over("Упустили зайца — проехал бесплатно")
+	else:
+		p.mark_soft_leave()
+		_finish_success("Всё правильно — отпустили")
+
+
+func _flow() -> Node:
+	return get_tree().get_first_node_in_group("game_flow")
+
+
+func _finish_success(text: String) -> void:
+	_clear_check()
+	var flow := _flow()
+	if flow and flow.has_method("show_success"):
+		flow.show_success(text)
+
+
+func _finish_game_over(reason: String) -> void:
+	_clear_check()
+	var flow := _flow()
+	if flow and flow.has_method("show_game_over"):
+		flow.show_game_over(reason)
+
+
+func _clear_check() -> void:
+	_pending_passenger = null
+	_check_phase = CheckPhase.NONE
+	if _action_menu:
+		_action_menu.close()
 
 
 func _begin_sit_down(seat: Seat) -> void:

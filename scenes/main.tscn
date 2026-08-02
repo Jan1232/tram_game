@@ -1,10 +1,11 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="PackedScene" path="res://scenes/tram/tram_car.tscn" id="1_tram"]
 [ext_resource type="PackedScene" path="res://scenes/player/conductor.tscn" id="2_conductor"]
 [ext_resource type="Script" path="res://scripts/passenger_director.gd" id="3_director"]
 [ext_resource type="PackedScene" path="res://scenes/tram/passenger.tscn" id="4_passenger"]
 [ext_resource type="Script" path="res://scripts/game_flow.gd" id="5_flow"]
+[ext_resource type="PackedScene" path="res://scenes/action_menu.tscn" id="6_action_menu"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("5_flow")
@@ -21,6 +22,23 @@ zoom = Vector2(1, 1)
 [node name="PassengerDirector" type="Node" parent="."]
 script = ExtResource("3_director")
 passenger_scene = ExtResource("4_passenger")
+
+[node name="ActionMenu" parent="." instance=ExtResource("6_action_menu")]
+
+[node name="SuccessLayer" type="CanvasLayer" parent="."]
+layer = 11
+
+[node name="SuccessToast" type="Label" parent="SuccessLayer"]
+offset_left = 40.0
+offset_top = 36.0
+offset_right = 560.0
+offset_bottom = 84.0
+theme_override_colors/font_color = Color(0.85, 1, 0.75, 1)
+theme_override_colors/font_outline_color = Color(0.05, 0.08, 0.05, 1)
+theme_override_constants/outline_size = 6
+theme_override_font_sizes/font_size = 28
+text = "Всё правильно"
+visible = false
 
 [node name="GameOverOverlay" type="CanvasLayer" parent="."]
 process_mode = 3
