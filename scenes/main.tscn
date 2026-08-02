@@ -1,0 +1,43 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/tram/tram_car.tscn" id="1_tram"]
+[ext_resource type="PackedScene" path="res://scenes/player/conductor.tscn" id="2_conductor"]
+[ext_resource type="Script" path="res://scripts/passenger_director.gd" id="3_director"]
+[ext_resource type="PackedScene" path="res://scenes/tram/passenger.tscn" id="4_passenger"]
+[ext_resource type="Script" path="res://scripts/game_flow.gd" id="5_flow"]
+
+[node name="Main" type="Node2D"]
+script = ExtResource("5_flow")
+
+[node name="TramCar" parent="." instance=ExtResource("1_tram")]
+
+[node name="Conductor" parent="." instance=ExtResource("2_conductor")]
+position = Vector2(220, 540)
+
+[node name="Camera2D" type="Camera2D" parent="Conductor"]
+position = Vector2(0, -40)
+zoom = Vector2(1, 1)
+
+[node name="PassengerDirector" type="Node" parent="."]
+script = ExtResource("3_director")
+passenger_scene = ExtResource("4_passenger")
+
+[node name="GameOverOverlay" type="CanvasLayer" parent="."]
+process_mode = 3
+visible = false
+
+[node name="Center" type="CenterContainer" parent="GameOverOverlay"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="PanelContainer" parent="GameOverOverlay/Center"]
+custom_minimum_size = Vector2(480, 200)
+
+[node name="Label" type="Label" parent="GameOverOverlay/Center/Panel"]
+theme_override_font_sizes/font_size = 22
+text = "Игра окончена"
+horizontal_alignment = 1
+vertical_alignment = 1

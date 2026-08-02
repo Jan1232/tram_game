@@ -1,0 +1,25 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/conductor.gd" id="1_script"]
+[ext_resource type="SpriteFrames" path="res://assets/characters/conductor/conductor_frames.tres" id="2_frames"]
+
+[sub_resource type="CircleShape2D" id="Circle_feet"]
+radius = 22.0
+
+[node name="Conductor" type="CharacterBody2D"]
+collision_layer = 1
+collision_mask = 1
+motion_mode = 1
+floor_snap_length = 0.0
+script = ExtResource("1_script")
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
+position = Vector2(0, -86)
+scale = Vector2(0.5, 0.5)
+sprite_frames = ExtResource("2_frames")
+animation = &"idle_afk"
+autoplay = "idle_afk"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(0, -12)
+shape = SubResource("Circle_feet")

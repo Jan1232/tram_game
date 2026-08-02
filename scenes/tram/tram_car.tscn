@@ -1,0 +1,21 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/tram_car.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://scenes/tram/seat.tscn" id="2_seat"]
+
+[node name="TramCar" type="Node2D"]
+script = ExtResource("1_script")
+seat_scene = ExtResource("2_seat")
+
+[node name="Floor" type="Polygon2D" parent="."]
+z_index = -2
+color = Color(0.18, 0.19, 0.22, 1)
+
+[node name="Walls" type="StaticBody2D" parent="."]
+collision_layer = 1
+collision_mask = 0
+
+[node name="Seats" type="Node2D" parent="."]
+
+[node name="ConductorSpawn" type="Marker2D" parent="."]
+position = Vector2(220, 540)

@@ -1,0 +1,21 @@
+# Godot 4+
+.godot/
+
+# Editor / OS
+.import/
+export.cfg
+export_presets.cfg
+*.translation
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Builds
+builds/
+*.exe
+*.pck
+*.zip
+
+# Local junk
+*.tmp
+*~
