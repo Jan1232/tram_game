@@ -221,8 +221,8 @@ func _show_summary(reason: String) -> void:
 	var title := "Смена окончена — 17:00"
 	if reason == "faint":
 		title = "Смена окончена досрочно"
-	var pending := eco.pending_dodger_escapes()
-	var pending_fine := pending * int(eco.balance.fine_dodger_escaped)
+	var pending: int = int(eco.pending_dodger_escapes())
+	var pending_fine: int = pending * int(eco.balance.fine_dodger_escaped)
 	var lines: PackedStringArray = [
 		title,
 		"Обмороки: %d" % _faints_this_shift,
