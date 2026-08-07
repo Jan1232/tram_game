@@ -35,13 +35,12 @@ var _date_label: Label
 
 
 func _ready() -> void:
-	_money_amount = starting_money
 	set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
 	offset_bottom = bar_height
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_build()
 	_bind_day_manager()
-	_refresh_money()
+	_bind_economy()
 
 
 func set_money(amount: int) -> void:
@@ -51,6 +50,23 @@ func set_money(amount: int) -> void:
 
 func add_money(delta: int) -> void:
 	set_money(_money_amount + delta)
+
+
+func _bind_economy() -> void:
+	var eco := get_node_or_null("/root/EconomySystem")
+	if eco == null:
+		_money_amount = starting_money
+		_refresh_money()
+		return
+	if eco.has_signal("money_changed"):
+		eco.money_changed.connect(_on_money_changed)
+	if eco.has_method("current_money"):
+		_on_money_changed(eco.current_money())
+
+
+func _on_money_changed(amount: int) -> void:
+	_money_amount = amount
+	_refresh_money()
 
 
 func _build() -> void:
@@ -94,7 +110,7 @@ func _build() -> void:
 	right.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(right)
 
-	_money_label = _make_label("$0", TEXT_COLOR, true)
+	_money_label = _make_label("0 ₽", TEXT_COLOR, true)
 	_time_label = _make_label("05:00", TIME_COLOR, true)
 	_date_label = _make_label("1 января", TEXT_COLOR, false)
 	right.add_child(_money_label)
@@ -141,8 +157,11 @@ func _on_date(_year: int, month: int, day: int) -> void:
 
 
 func _refresh_money() -> void:
-	if _money_label:
-		_money_label.text = _format_money(_money_amount)
+	if _money_label == null:
+		return
+	_money_label.text = _format_money(_money_amount)
+	var color := TIME_COLOR if _money_amount < 0 else TEXT_COLOR
+	_money_label.add_theme_color_override("font_color", color)
 
 
 func _format_money(amount: int) -> String:
@@ -151,7 +170,7 @@ func _format_money(amount: int) -> String:
 	var s := str(n)
 	var out := ""
 	while s.length() > 3:
-		out = "," + s.substr(s.length() - 3, 3) + out
+		out = " " + s.substr(s.length() - 3, 3) + out
 		s = s.substr(0, s.length() - 3)
 	out = s + out
-	return ("-$" if neg else "$") + out
+	return ("−" if neg else "") + out + " ₽"

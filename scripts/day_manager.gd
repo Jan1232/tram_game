@@ -52,6 +52,8 @@ func _ready() -> void:
 		_summary_layer.visible = false
 	var ss := get_node("/root/StressSystem")
 	ss.fainted.connect(on_faint)
+	var eco := get_node("/root/EconomySystem")
+	eco.fired.connect(_on_fired)
 	call_deferred("_start_shift")
 
 
@@ -120,8 +122,21 @@ func on_faint() -> void:
 
 
 func _start_shift() -> void:
+	var eco := get_node("/root/EconomySystem")
+	if eco.is_fired():
+		_show_fired_summary()
+		return
 	if _shifts_started > 0:
 		_advance_calendar_day()
+		# Штрафы за упущенных вчера — утром (GDD §2.9).
+		eco.apply_morning_fines()
+		if eco.last_morning_fine > 0:
+			var flow := get_tree().get_first_node_in_group("game_flow")
+			if flow and flow.has_method("show_notice"):
+				flow.show_notice(
+					"Вчера проехало зайцем: %d, штраф −%d ₽"
+					% [eco.last_morning_dodgers, eco.last_morning_fine]
+				)
 	_shifts_started += 1
 	_minutes = float(config.start_min)
 	_faints_this_shift = 0
@@ -147,6 +162,7 @@ func _end_shift(reason: String) -> void:
 		return
 	_running = false
 	get_tree().paused = true
+	get_node("/root/EconomySystem").settle_shift_end()
 	shift_ended.emit(reason)
 	_show_summary(reason)
 
@@ -154,9 +170,27 @@ func _end_shift(reason: String) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if _running or _fainting:
 		return
+	var eco := get_node("/root/EconomySystem")
+	if eco.is_fired():
+		return
 	if _summary_visible() and event.is_action_pressed("ui_accept"):
 		_start_shift()
 		get_viewport().set_input_as_handled()
+
+
+func _on_fired() -> void:
+	_running = false
+	get_tree().paused = true
+	_show_fired_summary()
+
+
+func _show_fired_summary() -> void:
+	if _summary_layer == null:
+		return
+	var body := "УВОЛЕН\n3 выговора за 2 дня.\nЛето потрачено впустую.\n\n(Экран концовки — позже)"
+	if _summary_label:
+		_summary_label.text = body
+	_summary_layer.visible = true
 
 
 func _reinit_director() -> void:
@@ -183,16 +217,30 @@ func _show_blackout(on: bool) -> void:
 func _show_summary(reason: String) -> void:
 	if _summary_layer == null:
 		return
+	var eco := get_node("/root/EconomySystem")
 	var title := "Смена окончена — 17:00"
 	if reason == "faint":
 		title = "Смена окончена досрочно"
-	var body := "%s\nОбмороки: %d\nПотолок стресса: %.0f\n\nEnter — следующая смена" % [
+	var pending := eco.pending_dodger_escapes()
+	var pending_fine := pending * int(eco.balance.fine_dodger_escaped)
+	var lines: PackedStringArray = [
 		title,
-		_faints_this_shift,
-		get_node("/root/StressSystem").current_ceiling(),
+		"Обмороки: %d" % _faints_this_shift,
+		"Потолок стресса: %.0f" % get_node("/root/StressSystem").current_ceiling(),
+		"",
+		"Еда: −%d ₽" % eco.last_food,
 	]
+	if eco.last_salary > 0:
+		lines.append("Зарплата: +%d ₽" % eco.last_salary)
+	if pending > 0:
+		lines.append("Зайцев упущено: %d → штраф утром −%d ₽" % [pending, pending_fine])
+	lines.append("Баланс: %d ₽" % eco.current_money())
+	if eco.reprimand_count() > 0:
+		lines.append("Выговоры (окно 2 дня): %d/3" % eco.reprimand_count())
+	lines.append("")
+	lines.append("Enter — следующая смена")
 	if _summary_label:
-		_summary_label.text = body
+		_summary_label.text = "\n".join(lines)
 	_summary_layer.visible = true
 
 
@@ -206,11 +254,12 @@ func _summary_visible() -> bool:
 
 
 func _build_default_bands() -> Array[DayBand]:
+	# Цель: ~35–50 пассажиров за смену (калибровка плейтестом).
 	var out: Array[DayBand] = []
-	out.append(_make_band("Утро тихое", 300, 420, 1, 3, 12.0, 18.0))
-	out.append(_make_band("Час пик", 420, 600, 5, 8, 3.0, 6.0))
-	out.append(_make_band("День", 600, 900, 2, 4, 10.0, 16.0))
-	out.append(_make_band("Вечерний пик", 900, 1020, 5, 8, 3.0, 6.0))
+	out.append(_make_band("Утро тихое", 300, 420, 1, 2, 18.0, 25.0))
+	out.append(_make_band("Час пик", 420, 600, 3, 5, 8.0, 12.0))
+	out.append(_make_band("День", 600, 900, 2, 3, 14.0, 20.0))
+	out.append(_make_band("Вечерний пик", 900, 1020, 3, 5, 8.0, 12.0))
 	return out
 
 

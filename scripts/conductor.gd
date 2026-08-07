@@ -45,6 +45,7 @@ enum AnimState {
 ## Не используем глобалы автолоадов — при hot-reload имена иногда пропадают на парсе.
 @onready var _stress: Node = get_node("/root/StressSystem")
 @onready var _fatigue: Node = get_node("/root/FatigueSystem")
+@onready var _economy: Node = get_node("/root/EconomySystem")
 
 var _anim_state: AnimState = AnimState.IDLE_AFK
 var _base_speed_scale: float = 1.0
@@ -332,7 +333,6 @@ func _resolve_demand(p: Passenger) -> void:
 func _resolve_insist(p: Passenger) -> void:
 	if p.paid_to_conductor:
 		# Уже платил тебе → «Настоять на оплате» = требовать дважды → скандал.
-		# Стоимость на исходе (уйти +12 / копы +30), не награда за ошибку памяти.
 		p.say_scandal()
 		_check_phase = CheckPhase.AFTER_SCANDAL
 		_open_scandal_menu(p)
@@ -341,6 +341,7 @@ func _resolve_insist(p: Passenger) -> void:
 	if p.rolls_insist_pays():
 		p.mark_sold()
 		_stress.add_fill(_stress.balance.insist_right)
+		_economy.award_dodger_caught()
 		_finish_success("Всё правильно — заставил заплатить")
 	else:
 		p.say_refuse_pay()
@@ -352,10 +353,12 @@ func _resolve_cops(p: Passenger) -> void:
 	if p.is_dodger():
 		p.mark_caught_dodger()
 		_stress.add_fill(_stress.balance.cops_right) # −30, награда за верную поимку
+		_economy.award_dodger_caught()
 		_finish_success("Всё правильно — поймали зайца")
 	else:
 		p.mark_wrong_arrest()
-		_stress.add_fill(_stress.balance.cops_wrong) # ошибочный арест (зеркало cops_right)
+		_stress.add_fill(_stress.balance.cops_wrong)
+		_economy.apply_wrong_arrest()
 		_finish_notice("Копы на человека, который уже платил")
 
 
@@ -363,7 +366,8 @@ func _resolve_leave(p: Passenger) -> void:
 	var from_scandal := _check_phase == CheckPhase.AFTER_SCANDAL
 	if p.is_dodger():
 		p.mark_dodger_escaped()
-		_stress.add_fill(_stress.balance.dodger_escaped)
+		_stress.apply_dodger_escaped()
+		_economy.note_dodger_escaped()
 		_finish_notice("Заяц проехал бесплатно")
 	else:
 		if from_scandal:

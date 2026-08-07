@@ -1,17 +1,17 @@
 class_name Passenger
 extends Area2D
 
-## Первое E: PAID платит; LIED/FORGOT могут врать «уже оплатил».
+## Первое E: HONEST_* платит; DODGER врёт «уже оплатил».
 ## После обилечивания часть теряет билет. Повторные проверки → эскалация скандала.
 
 signal ticketed(passenger: Passenger)
 signal removed(passenger: Passenger)
 signal outcome(result: String, passenger: Passenger)
 
-enum Kind { PAID, LIED, HONEST_FORGOT }
-# PAID — платит при первом контакте
-# LIED — заяц, врёт «оплатил» (тебе ещё не платил)
-# HONEST_FORGOT — устаревший спавн-тип; «потерял после оплаты тебе» = paid_to_conductor && !can_show_ticket
+enum Kind { HONEST_PROACTIVE, HONEST_PASSIVE, DODGER }
+# HONEST_PROACTIVE — платит при первом E
+# HONEST_PASSIVE — пока как proactive (платит по E); ветвление «ой, сейчас» — бэклог
+# DODGER — заяц, врёт «оплатил»
 
 const LINES_PAY := [
 	"Вот.",
@@ -83,7 +83,7 @@ const LINES_REFUSE_PAY := [
 @export var insist_pay_chance: float = 0.5
 
 var seat: Seat = null
-var kind: Kind = Kind.PAID
+var kind: Kind = Kind.HONEST_PROACTIVE
 var claims_paid: bool = false
 ## Реально заплатил кондуктору (не враньё).
 var paid_to_conductor: bool = false
@@ -171,7 +171,7 @@ func on_interact() -> String:
 		say(_pick(LINES_CLAIM))
 		return "claim"
 	# Первый контакт по типу.
-	if kind == Kind.PAID:
+	if kind == Kind.HONEST_PROACTIVE or kind == Kind.HONEST_PASSIVE:
 		collect_fare()
 		return "paid"
 	claims_paid = true

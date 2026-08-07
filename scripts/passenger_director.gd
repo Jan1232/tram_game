@@ -101,10 +101,13 @@ func _spawn_one() -> void:
 
 
 func _assign_kind(p: Passenger) -> void:
-	if randf() < 0.7:
-		p.kind = Passenger.Kind.PAID
+	var r := randf()
+	if r < 0.75:
+		p.kind = Passenger.Kind.HONEST_PROACTIVE
+	elif r < 0.93:
+		p.kind = Passenger.Kind.HONEST_PASSIVE
 	else:
-		p.kind = Passenger.Kind.LIED
+		p.kind = Passenger.Kind.DODGER
 
 
 func _pick_free_seat() -> Seat:

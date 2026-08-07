@@ -16,6 +16,8 @@ var _ceiling: float = 100.0
 ## Счётчик обмороков за кампанию (шрам). Не сбрасывается между сменами.
 var _faint_count: int = 0
 var _faint_pending: bool = false
+## Упущенные зайцы в текущей смене (прогрессивный стресс).
+var _missed_this_shift: int = 0
 
 
 func _ready() -> void:
@@ -69,8 +71,15 @@ func _faint() -> void:
 	# fill_changed уже эмитит change_ceiling — не дублируем.
 
 
+func apply_dodger_escaped() -> void:
+	var s: float = balance.dodger_escaped_base + balance.dodger_escaped_step * float(_missed_this_shift)
+	_missed_this_shift += 1
+	add_fill(s)
+
+
 func reset_fill() -> void:
 	_fill = 0.0
+	_missed_this_shift = 0
 	fill_changed.emit(_fill, _ceiling)
 
 
@@ -78,6 +87,7 @@ func reset() -> void:
 	_fill = 0.0
 	_faint_count = 0
 	_faint_pending = false
+	_missed_this_shift = 0
 	_ceiling = balance.ceiling_start
 	ceiling_changed.emit(_ceiling)
 	fill_changed.emit(_fill, _ceiling)

@@ -19,5 +19,8 @@ extends Resource
 @export var insist_right: float = -5.0 # настоял и был прав (заяц заплатил)
 @export var cops_right: float = -30.0 # копы + был прав (поймал зайца) — награда
 @export var cops_wrong: float = 18.0 # копы + ошибся (уже платил) — зеркало успеха (−24)
-@export var dodger_escaped: float = 12.0 # упустил зайца; давление — в деньгах
+## Прогрессивный стресс за упущенного в смене: base + step * n.
+@export var dodger_escaped_base: float = 10.0
+@export var dodger_escaped_step: float = 6.0
+@export var dodger_escaped: float = 12.0 # legacy fallback
 @export var scandal_leave: float = 12.0 # ушёл после скандала с честным
