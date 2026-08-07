@@ -1,13 +1,16 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scripts/tram_car.gd" id="1_script"]
 [ext_resource type="PackedScene" path="res://scenes/tram/seat.tscn" id="2_seat"]
 [ext_resource type="Texture2D" path="res://assets/texture/tram/new_floor_two.png" id="3_floor"]
+[ext_resource type="PackedScene" path="res://scenes/tram/background.tscn" id="4_bg"]
 
 [node name="TramCar" type="Node2D"]
 script = ExtResource("1_script")
 seat_scene = ExtResource("2_seat")
 floor_texture = ExtResource("3_floor")
+
+[node name="Background" parent="." instance=ExtResource("4_bg")]
 
 [node name="Floor" type="Node2D" parent="."]
 z_index = -2
