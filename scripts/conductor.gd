@@ -6,7 +6,7 @@ extends CharacterBody2D
 ## Пассажир: первое E = обилечить; меню только если заявил «уже оплатил».
 
 @export var speed: float = 280.0
-@export var frames_per_cycle: int = 20
+@export var frames_per_cycle: int = 43
 ## Длина шага (px за один gait-цикл). Больше = шире шаг, ноги не семенят.
 @export var stride_distance: float = 200.0
 @export var min_walk_fps: float = 8.0
@@ -15,7 +15,7 @@ extends CharacterBody2D
 @export var sprite_scale: float = 0.5
 @export var sit_fps: float = 24.0
 ## Смещение спрайта сидя: origin тела = ноги (stand ~-86), у сидения нужен оффсет ближе к NPC.
-@export var sit_sprite_offset: Vector2 = Vector2(0, -24)
+@export var sit_sprite_offset: Vector2 = Vector2(-6, -18)
 
 @export_group("Idle")
 @export var idle_afk_anim: StringName = &"idle_afk"
@@ -355,7 +355,7 @@ func _resolve_cops(p: Passenger) -> void:
 		_finish_success("Всё правильно — поймали зайца")
 	else:
 		p.mark_wrong_arrest()
-		_stress.add_fill(_stress.balance.cops_wrong) # +30, ошибочный арест
+		_stress.add_fill(_stress.balance.cops_wrong) # ошибочный арест (зеркало cops_right)
 		_finish_notice("Копы на человека, который уже платил")
 
 
@@ -406,10 +406,12 @@ func _begin_sit_down(seat: Seat) -> void:
 	_seat_await_release = true
 	_anim_state = AnimState.SITTING_DOWN
 
+	# Гасим коллизию ДО снапа и напрямую: иначе move_and_slide в SITTING_DOWN
+	# выталкивает ГГ из блокера в сторону подхода (разные точки посадки).
+	_collision.disabled = true
 	velocity = Vector2.ZERO
 	global_position = seat.get_sit_global_position()
 	_sprite.position = sit_sprite_offset
-	_collision.set_deferred("disabled", true)
 	z_index = 2 if seat.row == Seat.Row.BOTTOM else 0
 
 	_reset_sprite_scale()

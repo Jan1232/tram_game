@@ -5,7 +5,7 @@ extends Node
 
 signal fatigue_changed(level: float)
 
-@export var grace_sec: float = 40.0 ## секунд на ногах до начала накопления
+@export var grace_sec: float = 20.0 ## секунд на ногах до начала накопления
 @export var ramp_up_sec: float = 60.0 ## секунд стояния сверх буфера: 0→1
 @export var recover_sec: float = 30.0 ## секунд сидя: 1→0
 @export var min_speed_mult: float = 0.5 ## скорость при полной усталости

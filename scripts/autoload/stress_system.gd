@@ -13,6 +13,9 @@ const _BalanceScript = preload("res://resources/stress_balance.gd")
 
 var _fill: float = 0.0
 var _ceiling: float = 100.0
+## Счётчик обмороков за кампанию (шрам). Не сбрасывается между сменами.
+var _faint_count: int = 0
+var _faint_pending: bool = false
 
 
 func _ready() -> void:
@@ -28,8 +31,9 @@ func _ready() -> void:
 func add_fill(amount: float) -> void:
 	_fill = clampf(_fill + amount, 0.0, _ceiling)
 	fill_changed.emit(_fill, _ceiling)
-	if _fill >= _ceiling:
-		_faint()
+	if _fill >= _ceiling and not _faint_pending:
+		_faint_pending = true
+		call_deferred("_faint")
 
 
 func change_ceiling(amount: float) -> void:
@@ -53,10 +57,16 @@ func current_ceiling() -> float:
 
 
 func _faint() -> void:
+	_faint_pending = false
 	_fill = 0.0
-	change_ceiling(-balance.faint_ceiling_loss)
+	var idx: int = _faint_count
+	var loss: float = balance.faint_ceiling_loss_overflow
+	if idx < balance.faint_ceiling_losses.size():
+		loss = balance.faint_ceiling_losses[idx]
+	_faint_count += 1
+	change_ceiling(-loss)
 	fainted.emit()
-	fill_changed.emit(_fill, _ceiling)
+	# fill_changed уже эмитит change_ceiling — не дублируем.
 
 
 func reset_fill() -> void:
@@ -66,6 +76,8 @@ func reset_fill() -> void:
 
 func reset() -> void:
 	_fill = 0.0
+	_faint_count = 0
+	_faint_pending = false
 	_ceiling = balance.ceiling_start
 	ceiling_changed.emit(_ceiling)
 	fill_changed.emit(_fill, _ceiling)

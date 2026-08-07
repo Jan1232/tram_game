@@ -13,9 +13,9 @@ signal date_changed(year: int, month: int, day: int)
 @export var summary_layer_path: NodePath = NodePath("../ShiftSummaryLayer")
 @export var director_path: NodePath = NodePath("../PassengerDirector")
 ## Стартовая календарная дата кампании (дата первой смены).
-@export var start_year: int = 1998
-@export var start_month: int = 11
-@export var start_day: int = 22
+@export var start_year: int = 2026
+@export var start_month: int = 6
+@export var start_day: int = 1
 
 var _minutes: float = 0.0
 var _running: bool = false
@@ -23,9 +23,9 @@ var _current_band: DayBand = null
 var _faints_this_shift: int = 0
 var _fainting: bool = false
 var _shifts_started: int = 0
-var _cal_year: int = 1998
-var _cal_month: int = 11
-var _cal_day: int = 22
+var _cal_year: int = 2026
+var _cal_month: int = 6
+var _cal_day: int = 1
 
 var _faint_layer: CanvasLayer = null
 var _summary_layer: CanvasLayer = null

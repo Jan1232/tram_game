@@ -1,11 +1,11 @@
-[gd_resource type="SpriteFrames" load_steps=364 format=3]
+[gd_resource type="SpriteFrames" load_steps=368 format=3]
 
 [ext_resource type="Texture2D" path="res://assets/characters/conductor/spritesheet_idle_first.png" id="1_first"]
 [ext_resource type="Texture2D" path="res://assets/characters/conductor/spritesheet_idle_steps.png" id="2_steps"]
 [ext_resource type="Texture2D" path="res://assets/characters/conductor/spritesheet-idle_neck.png" id="3_neck"]
 [ext_resource type="Texture2D" path="res://assets/characters/conductor/spritesheet-idle-round-neck.png" id="4_round"]
 [ext_resource type="Texture2D" path="res://assets/characters/conductor/spritesheet-sit-down.png" id="5_sit"]
-[ext_resource type="Texture2D" path="res://assets/characters/conductor/walk.png" id="6_walk"]
+[ext_resource type="Texture2D" path="res://assets/characters/conductor/spritesheet-walk.png" id="6_walk"]
 
 [sub_resource type="AtlasTexture" id="Afk_0"]
 atlas = ExtResource("1_first")
@@ -1435,6 +1435,22 @@ region = Rect2(2560, 2048, 512, 512)
 atlas = ExtResource("6_walk")
 region = Rect2(3072, 2048, 512, 512)
 
+[sub_resource type="AtlasTexture" id="Walk_39"]
+atlas = ExtResource("6_walk")
+region = Rect2(3584, 2048, 512, 512)
+
+[sub_resource type="AtlasTexture" id="Walk_40"]
+atlas = ExtResource("6_walk")
+region = Rect2(0, 2560, 512, 512)
+
+[sub_resource type="AtlasTexture" id="Walk_41"]
+atlas = ExtResource("6_walk")
+region = Rect2(512, 2560, 512, 512)
+
+[sub_resource type="AtlasTexture" id="Walk_42"]
+atlas = ExtResource("6_walk")
+region = Rect2(1024, 2560, 512, 512)
+
 [resource]
 animations = [{
 	"frames": [{"duration": 1.0, "texture": SubResource("Afk_0")}],
@@ -1467,7 +1483,7 @@ animations = [{
 	"name": &"sit_down",
 	"speed": 24.0
 }, {
-	"frames": [{"duration": 1.0, "texture": SubResource("Walk_0")}, {"duration": 1.0, "texture": SubResource("Walk_1")}, {"duration": 1.0, "texture": SubResource("Walk_2")}, {"duration": 1.0, "texture": SubResource("Walk_3")}, {"duration": 1.0, "texture": SubResource("Walk_4")}, {"duration": 1.0, "texture": SubResource("Walk_5")}, {"duration": 1.0, "texture": SubResource("Walk_6")}, {"duration": 1.0, "texture": SubResource("Walk_7")}, {"duration": 1.0, "texture": SubResource("Walk_8")}, {"duration": 1.0, "texture": SubResource("Walk_9")}, {"duration": 1.0, "texture": SubResource("Walk_10")}, {"duration": 1.0, "texture": SubResource("Walk_11")}, {"duration": 1.0, "texture": SubResource("Walk_12")}, {"duration": 1.0, "texture": SubResource("Walk_13")}, {"duration": 1.0, "texture": SubResource("Walk_14")}, {"duration": 1.0, "texture": SubResource("Walk_15")}, {"duration": 1.0, "texture": SubResource("Walk_16")}, {"duration": 1.0, "texture": SubResource("Walk_17")}, {"duration": 1.0, "texture": SubResource("Walk_18")}, {"duration": 1.0, "texture": SubResource("Walk_19")}, {"duration": 1.0, "texture": SubResource("Walk_20")}, {"duration": 1.0, "texture": SubResource("Walk_21")}, {"duration": 1.0, "texture": SubResource("Walk_22")}, {"duration": 1.0, "texture": SubResource("Walk_23")}, {"duration": 1.0, "texture": SubResource("Walk_24")}, {"duration": 1.0, "texture": SubResource("Walk_25")}, {"duration": 1.0, "texture": SubResource("Walk_26")}, {"duration": 1.0, "texture": SubResource("Walk_27")}, {"duration": 1.0, "texture": SubResource("Walk_28")}, {"duration": 1.0, "texture": SubResource("Walk_29")}, {"duration": 1.0, "texture": SubResource("Walk_30")}, {"duration": 1.0, "texture": SubResource("Walk_31")}, {"duration": 1.0, "texture": SubResource("Walk_32")}, {"duration": 1.0, "texture": SubResource("Walk_33")}, {"duration": 1.0, "texture": SubResource("Walk_34")}, {"duration": 1.0, "texture": SubResource("Walk_35")}, {"duration": 1.0, "texture": SubResource("Walk_36")}, {"duration": 1.0, "texture": SubResource("Walk_37")}, {"duration": 1.0, "texture": SubResource("Walk_38")}],
+	"frames": [{"duration": 1.0, "texture": SubResource("Walk_0")}, {"duration": 1.0, "texture": SubResource("Walk_1")}, {"duration": 1.0, "texture": SubResource("Walk_2")}, {"duration": 1.0, "texture": SubResource("Walk_3")}, {"duration": 1.0, "texture": SubResource("Walk_4")}, {"duration": 1.0, "texture": SubResource("Walk_5")}, {"duration": 1.0, "texture": SubResource("Walk_6")}, {"duration": 1.0, "texture": SubResource("Walk_7")}, {"duration": 1.0, "texture": SubResource("Walk_8")}, {"duration": 1.0, "texture": SubResource("Walk_9")}, {"duration": 1.0, "texture": SubResource("Walk_10")}, {"duration": 1.0, "texture": SubResource("Walk_11")}, {"duration": 1.0, "texture": SubResource("Walk_12")}, {"duration": 1.0, "texture": SubResource("Walk_13")}, {"duration": 1.0, "texture": SubResource("Walk_14")}, {"duration": 1.0, "texture": SubResource("Walk_15")}, {"duration": 1.0, "texture": SubResource("Walk_16")}, {"duration": 1.0, "texture": SubResource("Walk_17")}, {"duration": 1.0, "texture": SubResource("Walk_18")}, {"duration": 1.0, "texture": SubResource("Walk_19")}, {"duration": 1.0, "texture": SubResource("Walk_20")}, {"duration": 1.0, "texture": SubResource("Walk_21")}, {"duration": 1.0, "texture": SubResource("Walk_22")}, {"duration": 1.0, "texture": SubResource("Walk_23")}, {"duration": 1.0, "texture": SubResource("Walk_24")}, {"duration": 1.0, "texture": SubResource("Walk_25")}, {"duration": 1.0, "texture": SubResource("Walk_26")}, {"duration": 1.0, "texture": SubResource("Walk_27")}, {"duration": 1.0, "texture": SubResource("Walk_28")}, {"duration": 1.0, "texture": SubResource("Walk_29")}, {"duration": 1.0, "texture": SubResource("Walk_30")}, {"duration": 1.0, "texture": SubResource("Walk_31")}, {"duration": 1.0, "texture": SubResource("Walk_32")}, {"duration": 1.0, "texture": SubResource("Walk_33")}, {"duration": 1.0, "texture": SubResource("Walk_34")}, {"duration": 1.0, "texture": SubResource("Walk_35")}, {"duration": 1.0, "texture": SubResource("Walk_36")}, {"duration": 1.0, "texture": SubResource("Walk_37")}, {"duration": 1.0, "texture": SubResource("Walk_38")}, {"duration": 1.0, "texture": SubResource("Walk_39")}, {"duration": 1.0, "texture": SubResource("Walk_40")}, {"duration": 1.0, "texture": SubResource("Walk_41")}, {"duration": 1.0, "texture": SubResource("Walk_42")}],
 	"loop": true,
 	"name": &"walk",
 	"speed": 32.0

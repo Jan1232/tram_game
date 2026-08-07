@@ -78,7 +78,7 @@ const LINES_REFUSE_PAY := [
 @export var lifetime_max_sec: float = 120.0
 @export var speech_duration_sec: float = 2.6
 ## Шанс потерять билет после того, как оплатил тебе.
-@export var lose_ticket_chance: float = 0.35
+@export var lose_ticket_chance: float = 0.25
 ## Шанс, что не плативший заплатит при «Настоять».
 @export var insist_pay_chance: float = 0.5
 

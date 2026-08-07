@@ -4,3 +4,7 @@
 
 [resource]
 script = ExtResource("1_balance")
+faint_ceiling_losses = Array[float]([8.0, 10.0, 13.0, 17.0, 22.0])
+faint_ceiling_loss_overflow = 22.0
+cops_wrong = 18.0
+dodger_escaped = 12.0
